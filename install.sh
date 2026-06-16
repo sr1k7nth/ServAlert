@@ -37,6 +37,7 @@ Description=ServAlert monitoring daemon
 After=network.target
 
 [Service]
+Type=forking
 ExecStart=/usr/local/bin/sysmon
 Restart=on-failure
 RestartSec=5
