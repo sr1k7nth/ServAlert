@@ -67,4 +67,7 @@ Total:                     ~20.6M
 ## Future features:
 - Network usage
 - Web dashboard
+  - last 24h CPU
+  - memory graph
+  - network graph
 - Email alert
