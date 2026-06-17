@@ -35,9 +35,12 @@ def check_metrics(config):
 
     if not rows:
         return
+
+    if len(rows) < 6:
+        return
     
     last_timestamp = rows[0]["timestamp"]
-    if time.time() - last_timestamp > 30:
+    if time.time() - last_timestamp > 90:
         send_alert("SerAlert core stopped: daemon may have crashed", config)
 
     avg_cpu = sum(row["cpu_percent"] for row in rows) / len(rows)
@@ -47,7 +50,7 @@ def check_metrics(config):
     avg_mem_available = sum(row["mem_available"] for row in rows) / len(rows)
     mem_used_percent = 100 - (avg_mem_available / rows[0]["mem_total"] * 100)
 
-    if mem_used_percent > float(config["CPU_THRESHOLD"]):
+    if mem_used_percent > float(config["MEM_THRESHOLD"]):
         send_mem_alert(mem_used_percent, config)
 
 

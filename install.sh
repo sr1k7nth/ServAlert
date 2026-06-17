@@ -38,15 +38,39 @@ MEM_THRESHOLD=${MEM_THRESHOLD:-85}
 read -p "Network usage alert threshold in Kbps? (default 10000): " NET_THRESHOLD
 NET_THRESHOLD=${NET_THRESHOLD:-10000}
 
-read -p "Telegram bot token: " TELEGRAM_TOKEN
-if [ -z "$TELEGRAM_TOKEN" ]; then
-  echo "Telegram bot token is required."
-  exit 1
+# Telegram
+read -p "Enable Telegram alerts? (y/n): " ENABLE_TELEGRAM
+if [ "$ENABLE_TELEGRAM" = "y" ]; then
+  read -p "Telegram bot token: " TELEGRAM_TOKEN
+  read -p "Telegram chat ID: " TELEGRAM_CHAT_ID
+  if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+    echo "Telegram token and chat ID are required."
+    exit 1
+  fi
+  TELEGRAM=1
+else
+  TELEGRAM=0
+  TELEGRAM_TOKEN=""
+  TELEGRAM_CHAT_ID=""
 fi
 
-read -p "Telegram chat ID: " TELEGRAM_CHAT_ID
-if [ -z "$TELEGRAM_CHAT_ID" ]; then
-  echo "Telegram chat ID is required."
+# Discord
+read -p "Enable Discord alerts? (y/n): " ENABLE_DISCORD
+if [ "$ENABLE_DISCORD" = "y" ]; then
+  read -p "Discord webhook URL: " DISCORD_WEBHOOK
+  if [ -z "$DISCORD_WEBHOOK" ]; then
+    echo "Discord webhook URL is required."
+    exit 1
+  fi
+  DISCORD=1
+else
+  DISCORD=0
+  DISCORD_WEBHOOK=""
+fi
+
+# At least one must be enabled
+if [ "$TELEGRAM" -eq 0 ] && [ "$DISCORD" -eq 0 ]; then
+  echo "At least one alert platform must be enabled."
   exit 1
 fi
 
@@ -58,8 +82,11 @@ ALERT_INTERVAL=$ALERT_INTERVAL
 CPU_THRESHOLD=$CPU_THRESHOLD
 MEM_THRESHOLD=$MEM_THRESHOLD
 NET_THRESHOLD=$NET_THRESHOLD
+TELEGRAM=$TELEGRAM
 TELEGRAM_TOKEN=$TELEGRAM_TOKEN
 TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
+DISCORD=$DISCORD
+DISCORD_WEBHOOK=$DISCORD_WEBHOOK
 EOF
 
 # Stop services if already running
