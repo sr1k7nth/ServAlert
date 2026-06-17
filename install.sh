@@ -17,6 +17,11 @@ if ! pkg-config --exists sqlite3 2>/dev/null; then
   exit 1
 fi
 
+if ! command -v python3 &>/dev/null; then
+  echo "python3 not found. Install it first."
+  exit 1
+fi
+
 # User configuration
 read -p "How often should it monitor usage in seconds? (default 10): " MONITOR_INTERVAL
 MONITOR_INTERVAL=${MONITOR_INTERVAL:-10}
@@ -36,6 +41,7 @@ if [ -z "$TELEGRAM_CHAT_ID" ]; then
   exit 1
 fi
 
+# Write config
 mkdir -p /etc/servalert
 cat >/etc/servalert/config.conf <<EOF
 MONITOR_INTERVAL=$MONITOR_INTERVAL
@@ -44,7 +50,11 @@ TELEGRAM_TOKEN=$TELEGRAM_TOKEN
 TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
 EOF
 
-# 1. compile the C core
+# Stop service if already running
+systemctl stop servalert 2>/dev/null
+systemctl stop servalert-alert 2>/dev/null
+
+# 1. Compile the C core
 echo "Compiling..."
 gcc core/core.c -lsqlite3 -o sysmon
 if [ $? -ne 0 ]; then
@@ -52,12 +62,22 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# 2. copy binary to system path
-echo "Installing binary..."
+# 2. Copy binaries and Python files
+echo "Installing files..."
 cp sysmon /usr/local/bin/sysmon
+mkdir -p /usr/local/lib/servalert
+cp alert-system/main.py /usr/local/lib/servalert/main.py
+cp alert-system/alerts.py /usr/local/lib/servalert/alerts.py
 
-# 3. write the systemd service file
-echo "Writing service file..."
+# 3. Install Python dependencies
+echo "Installing Python dependencies..."
+pip3 install requests -q
+
+# 4. Create data directory
+mkdir -p /var/lib/servalert
+
+# 5. Write systemd service for C core
+echo "Writing service files..."
 cat >/etc/systemd/system/servalert.service <<'EOF'
 [Unit]
 Description=ServAlert monitoring daemon
@@ -73,16 +93,34 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-mkdir -p /var/lib/servalert
+# 6. Write systemd service for Python alert system
+cat >/etc/systemd/system/servalert-alert.service <<'EOF'
+[Unit]
+Description=ServAlert alert system
+After=servalert.service
 
-# 4. reload systemd, enable and start
-echo "Starting service..."
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/lib/servalert/main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 7. Reload systemd, enable and start both services
+echo "Starting services..."
 systemctl daemon-reload
 systemctl enable servalert
 systemctl start servalert
+systemctl enable servalert-alert
+systemctl start servalert-alert
 
 echo ""
 echo "ServAlert installed and running."
-echo "  Status:  systemctl status servalert"
+echo ""
+echo "  C core:  systemctl status servalert"
+echo "  Alerts:  systemctl status servalert-alert"
 echo "  Logs:    journalctl -u servalert -f"
-echo "  Stop:    systemctl stop servalert"
+echo "           journalctl -u servalert-alert -f"
+echo "  Stop:    systemctl stop servalert servalert-alert"
