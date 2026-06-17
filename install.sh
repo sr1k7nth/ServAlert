@@ -29,6 +29,15 @@ MONITOR_INTERVAL=${MONITOR_INTERVAL:-10}
 read -p "How often should it check for alerts in seconds? (default 60): " ALERT_INTERVAL
 ALERT_INTERVAL=${ALERT_INTERVAL:-60}
 
+read -p "CPU usage alert threshold in percent? (default 80): " CPU_THRESHOLD
+CPU_THRESHOLD=${CPU_THRESHOLD:-80}
+
+read -p "Memory usage alert threshold in percent? (default 85): " MEM_THRESHOLD
+MEM_THRESHOLD=${MEM_THRESHOLD:-85}
+
+read -p "Network usage alert threshold in Kbps? (default 10000): " NET_THRESHOLD
+NET_THRESHOLD=${NET_THRESHOLD:-10000}
+
 read -p "Telegram bot token: " TELEGRAM_TOKEN
 if [ -z "$TELEGRAM_TOKEN" ]; then
   echo "Telegram bot token is required."
@@ -46,11 +55,14 @@ mkdir -p /etc/servalert
 cat >/etc/servalert/config.conf <<EOF
 MONITOR_INTERVAL=$MONITOR_INTERVAL
 ALERT_INTERVAL=$ALERT_INTERVAL
+CPU_THRESHOLD=$CPU_THRESHOLD
+MEM_THRESHOLD=$MEM_THRESHOLD
+NET_THRESHOLD=$NET_THRESHOLD
 TELEGRAM_TOKEN=$TELEGRAM_TOKEN
 TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
 EOF
 
-# Stop service if already running
+# Stop services if already running
 systemctl stop servalert 2>/dev/null
 systemctl stop servalert-alert 2>/dev/null
 
