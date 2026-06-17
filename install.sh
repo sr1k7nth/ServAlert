@@ -17,6 +17,33 @@ if ! pkg-config --exists sqlite3 2>/dev/null; then
   exit 1
 fi
 
+# User configuration
+read -p "How often should it monitor usage in seconds? (default 10): " MONITOR_INTERVAL
+MONITOR_INTERVAL=${MONITOR_INTERVAL:-10}
+
+read -p "How often should it check for alerts in seconds? (default 60): " ALERT_INTERVAL
+ALERT_INTERVAL=${ALERT_INTERVAL:-60}
+
+read -p "Telegram bot token: " TELEGRAM_TOKEN
+if [ -z "$TELEGRAM_TOKEN" ]; then
+  echo "Telegram bot token is required."
+  exit 1
+fi
+
+read -p "Telegram chat ID: " TELEGRAM_CHAT_ID
+if [ -z "$TELEGRAM_CHAT_ID" ]; then
+  echo "Telegram chat ID is required."
+  exit 1
+fi
+
+mkdir -p /etc/servalert
+cat >/etc/servalert/config.conf <<EOF
+MONITOR_INTERVAL=$MONITOR_INTERVAL
+ALERT_INTERVAL=$ALERT_INTERVAL
+TELEGRAM_TOKEN=$TELEGRAM_TOKEN
+TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
+EOF
+
 # 1. compile the C core
 echo "Compiling..."
 gcc core/core.c -lsqlite3 -o sysmon

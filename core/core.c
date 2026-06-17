@@ -22,6 +22,22 @@ typedef struct {
   long cpu_softirq;
 } Metrics;
 
+int read_config() {
+  FILE *f = fopen("/etc/servalert/config.conf", "r");
+  if (f == NULL)
+    return 10; // default 10s if no config
+
+  char line[256];
+  int interval = 10;
+
+  while (fgets(line, sizeof(line), f) != NULL) {
+    if (sscanf(line, "MONITOR_INTERVAL=%d", &interval) == 1)
+      break;
+  }
+  fclose(f);
+  return interval;
+}
+
 void read_memory(Metrics *m) {
 
   FILE *f = fopen("/proc/meminfo", "r");
@@ -130,7 +146,8 @@ int main(int argc, char *argv[]) {
   read_cpu(&prev);
   read_memory(&prev);
 
-  struct timespec ts = {10, 0};
+  int interval = read_config();
+  struct timespec ts = {interval, 0};
 
   signal(SIGTERM, handle_signal);
   signal(SIGINT, handle_signal);
